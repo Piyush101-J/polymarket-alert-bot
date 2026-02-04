@@ -1,115 +1,137 @@
+import time
 import requests
+import re
+from threading import Thread
 from flask import Flask
 import os
 
 app = Flask(__name__)
 
 # ================= TELEGRAM =================
-BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"  # Replace with actual token
-CHAT_ID = "1771346124"              # Replace with actual chat ID
+BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # ⚠️ REPLACE THIS
+CHAT_ID = "YOUR_CHAT_ID"              # ⚠️ REPLACE THIS
 
+def send_alert(text):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": text,
+        "disable_web_page_preview": False
+    }
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        print(f"Telegram response: {response.status_code} - {response.text}")
+        return response.status_code == 200
+    except Exception as e:
+        print(f"❌ Failed to send alert: {e}")
+        return False
+
+# ================= SETTINGS =================
+CHECK_INTERVAL = 60
+MIN_PROB = 0.01
+MAX_PROB = 0.40
+POLYMARKET_URL = "https://gamma-api.polymarket.com/markets"
+
+# ================= HELPERS =================
+def extract_target_price(question: str):
+    match = re.search(r"(\d{4,6})", question)
+    if match:
+        return int(match.group(1))
+    return None
+
+def extract_yes_probability(outcomes):
+    if not isinstance(outcomes, list):
+        return None
+    for o in outcomes:
+        if isinstance(o, dict) and o.get("name", "").lower() == "yes":
+            try:
+                return float(o.get("price"))
+            except:
+                return None
+    return None
+
+def fetch_markets():
+    r = requests.get(POLYMARKET_URL, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+# ================= CORE LOOP =================
+def bot_loop():
+    print("🔍 Checking markets...")
+    try:
+        markets = fetch_markets()
+        print(f"Found {len(markets)} markets")
+        
+        bitcoin_count = 0
+        alert_count = 0
+        
+        for m in markets:
+            question = m.get("question", "")
+            slug = m.get("slug", "")
+            outcomes = m.get("outcomes", [])
+            
+            if "bitcoin" not in question.lower():
+                continue
+            
+            bitcoin_count += 1
+            prob = extract_yes_probability(outcomes)
+            target_price = extract_target_price(question)
+            
+            print(f"📊 Bitcoin market: {question[:50]}... | Prob: {prob} | Target: {target_price}")
+            
+            if prob is None or target_price is None:
+                continue
+            
+            if MIN_PROB <= prob <= MAX_PROB:
+                url = f"https://polymarket.com/market/{slug}"
+                message = (
+                    f"🚨 EARLY POLYMARKET ALERT\n\n"
+                    f"🪙 {question}\n"
+                    f"🎯 Target Price: {target_price}\n"
+                    f"📊 YES Probability: {prob*100:.2f}%\n"
+                    f"🔗 {url}"
+                )
+                if send_alert(message):
+                    alert_count += 1
+                    print(f"✅ Alert sent for: {question[:50]}...")
+        
+        print(f"✅ Check complete. Bitcoin markets: {bitcoin_count}, Alerts sent: {alert_count}")
+        
+    except Exception as e:
+        print(f"❌ Error in bot_loop: {e}")
+
+def run_bot():
+    print("🚀 Worker booted, running permanently")
+    
+    # Send startup message
+    if send_alert("🚀 Polymarket BTC Alert Bot is LIVE"):
+        print("✅ Startup message sent")
+    else:
+        print("❌ Failed to send startup message - check credentials!")
+    
+    while True:
+        try:
+            bot_loop()
+        except Exception as e:
+            print(f"❌ Error: {e}")
+        time.sleep(CHECK_INTERVAL)
+
+# ================= FLASK ROUTES =================
 @app.route('/')
 def health():
     return "Bot is running", 200
 
 @app.route('/test')
-def test_telegram():
-    """Test endpoint to send a message"""
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": CHAT_ID,
-            "text": "🧪 TEST MESSAGE - If you see this, Telegram works!"
-        }
-        response = requests.post(url, json=payload, timeout=10)
-        return f"Response: {response.status_code} - {response.text}", 200
-    except Exception as e:
-        return f"Error: {str(e)}", 500
+def test():
+    """Manual test endpoint"""
+    success = send_alert("🧪 Manual test from /test endpoint")
+    return f"Message sent: {success}", 200
 
+# ================= BOOTSTRAP =================
 if __name__ == "__main__":
+    bot_thread = Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    
     port = int(os.environ.get("PORT", 8080))
-    print(f"Starting test server on port {port}")
-    print(f"Visit: https://your-railway-url.up.railway.app/test")
+    print(f"🌐 Flask server starting on port {port}")
     app.run(host="0.0.0.0", port=port)
-```
-
-**Deploy this and visit:** `https://your-railway-url.up.railway.app/test`
-
-You should see either:
-- ✅ "Response: 200" (success)
-- ❌ An error message
-
----
-
-## Step 2: Get Your Correct CHAT_ID
-
-If the test fails, your `CHAT_ID` might be wrong. Here's how to get it:
-
-**Method 1: Use @userinfobot**
-1. Open Telegram
-2. Search for `@userinfobot`
-3. Start a chat with it
-4. It will send you your `CHAT_ID` (a number like `123456789`)
-
-**Method 2: Use getUpdates API**
-1. Send any message to your bot first
-2. Visit this URL in your browser:
-```
-   https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdatesimport requests
-from flask import Flask
-import os
-
-app = Flask(__name__)
-
-# ================= TELEGRAM =================
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # Replace with actual token
-CHAT_ID = "YOUR_CHAT_ID"              # Replace with actual chat ID
-
-@app.route('/')
-def health():
-    return "Bot is running", 200
-
-@app.route('/test')
-def test_telegram():
-    """Test endpoint to send a message"""
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": CHAT_ID,
-            "text": "🧪 TEST MESSAGE - If you see this, Telegram works!"
-        }
-        response = requests.post(url, json=payload, timeout=10)
-        return f"Response: {response.status_code} - {response.text}", 200
-    except Exception as e:
-        return f"Error: {str(e)}", 500
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    print(f"Starting test server on port {port}")
-    print(f"Visit: https://your-railway-url.up.railway.app/test")
-    app.run(host="0.0.0.0", port=port)
-```
-
-**Deploy this and visit:** `https://your-railway-url.up.railway.app/test`
-
-You should see either:
-- ✅ "Response: 200" (success)
-- ❌ An error message
-
----
-
-## Step 2: Get Your Correct CHAT_ID
-
-If the test fails, your `CHAT_ID` might be wrong. Here's how to get it:
-
-**Method 1: Use @userinfobot**
-1. Open Telegram
-2. Search for `@userinfobot`
-3. Start a chat with it
-4. It will send you your `CHAT_ID` (a number like `123456789`)
-
-**Method 2: Use getUpdates API**
-1. Send any message to your bot first
-2. Visit this URL in your browser:
-```
-   https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
