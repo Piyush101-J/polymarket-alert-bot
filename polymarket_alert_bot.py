@@ -43,6 +43,21 @@ MIN_PROB = 0.01
 MAX_PROB = 0.40
 POLYMARKET_URL = "https://gamma-api.polymarket.com/markets"
 
+PRICE_BUFFER_LOW = 500
+PRICE_BUFFER_HIGH = 600
+
+def get_current_btc_price():
+    try:
+        url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        price = data['bitcoin']['usd']
+        print("Current BTC Price: ${}".format(price))
+        return price
+    except Exception as e:
+        print("Error fetching BTC price: {}".format(e))
+        return None
+
 def extract_target_price(question):
     match = re.search(r"(\d{4,6})", question)
     if match:
@@ -65,9 +80,30 @@ def fetch_markets():
     r.raise_for_status()
     return r.json()
 
+def is_price_in_range(current_price, target_price):
+    if current_price is None or target_price is None:
+        return False
+    
+    lower_bound = target_price - PRICE_BUFFER_HIGH
+    upper_bound = target_price - PRICE_BUFFER_LOW
+    
+    in_range = lower_bound <= current_price <= upper_bound
+    
+    if in_range:
+        print("ALERT CONDITION MET: BTC ${} is between ${} and ${} (target: ${})".format(
+            current_price, lower_bound, upper_bound, target_price))
+    
+    return in_range
+
 def bot_loop():
     print("Checking markets...")
     try:
+        current_btc_price = get_current_btc_price()
+        
+        if current_btc_price is None:
+            print("Skipping this check - couldn't fetch BTC price")
+            return
+        
         markets = fetch_markets()
         print("Found {} markets".format(len(markets)))
         
@@ -82,23 +118,49 @@ def bot_loop():
             if "bitcoin" not in question.lower():
                 continue
             
+            if "above" not in question.lower() and "over" not in question.lower():
+                continue
+            
             bitcoin_count += 1
             prob = extract_yes_probability(outcomes)
             target_price = extract_target_price(question)
             
-            print("Bitcoin market: {}... | Prob: {} | Target: {}".format(question[:50], prob, target_price))
+            print("Bitcoin market: {}... | Prob: {} | Target: ${}".format(
+                question[:50], prob, target_price))
             
             if prob is None or target_price is None:
                 continue
             
             if MIN_PROB <= prob <= MAX_PROB:
-                url = "https://polymarket.com/market/{}".format(slug)
-                message = "EARLY POLYMARKET ALERT\n\nQuestion: {}\nTarget Price: {}\nYES Probability: {:.2f}%\nLink: {}".format(question, target_price, prob*100, url)
-                if send_alert(message):
-                    alert_count += 1
-                    print("Alert sent for: {}...".format(question[:50]))
+                if is_price_in_range(current_btc_price, target_price):
+                    url = "https://polymarket.com/market/{}".format(slug)
+                    message = (
+                        "CRITICAL ALERT - BTC APPROACHING TARGET\n\n"
+                        "Question: {}\n"
+                        "Target Price: ${}\n"
+                        "Current BTC Price: ${}\n"
+                        "Distance to Target: ${}\n"
+                        "YES Probability: {:.2f}%\n"
+                        "Link: {}".format(
+                            question,
+                            target_price,
+                            current_btc_price,
+                            target_price - current_btc_price,
+                            prob * 100,
+                            url
+                        )
+                    )
+                    if send_alert(message):
+                        alert_count += 1
+                        print("ALERT SENT for: {}...".format(question[:50]))
+                else:
+                    print("Probability OK but price not in range (${} to ${})".format(
+                        target_price - PRICE_BUFFER_HIGH,
+                        target_price - PRICE_BUFFER_LOW
+                    ))
         
-        print("Check complete. Bitcoin markets: {}, Alerts sent: {}".format(bitcoin_count, alert_count))
+        print("Check complete. Bitcoin markets: {}, Alerts sent: {}".format(
+            bitcoin_count, alert_count))
         
     except Exception as e:
         print("Error in bot_loop: {}".format(e))
@@ -106,7 +168,7 @@ def bot_loop():
 def run_bot():
     print("Worker booted, running permanently")
     
-    if send_alert("Polymarket BTC Alert Bot is LIVE"):
+    if send_alert("Polymarket BTC Alert Bot is LIVE - Now with Price Checking"):
         print("Startup message sent successfully!")
     else:
         print("Failed to send startup message - CHECK YOUR BOT_TOKEN AND CHAT_ID!")
