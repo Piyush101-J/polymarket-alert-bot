@@ -8,8 +8,8 @@ import os
 app = Flask(__name__)
 
 # ================= TELEGRAM =================
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # ⚠️ REPLACE THIS
-CHAT_ID = "YOUR_CHAT_ID"              # ⚠️ REPLACE THIS
+BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"  # ⚠️ REPLACE THIS
+CHAT_ID = "1771346124"              # ⚠️ REPLACE THIS
 
 def send_alert(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
