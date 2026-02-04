@@ -1,63 +1,95 @@
 import time
 import requests
 
+# ================= TELEGRAM =================
 BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"
 CHAT_ID = "1771346124"
 
-API_URL = "https://gamma-api.polymarket.com/markets"
-
-CHECK_INTERVAL = 30
-MIN_PROB = 0.01   # 1%
-MAX_PROB = 0.40   # 40%
-
-def send_telegram(msg):
+def send_alert(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
-        "text": msg,
+        "text": text,
         "disable_web_page_preview": False
     }
     requests.post(url, json=payload, timeout=10)
 
-print("✅ Polymarket BTC Alert Bot Started")
+# ================= SETTINGS =================
+CHECK_INTERVAL = 60        # seconds
+MIN_PROB = 0.01            # 1%
+MAX_PROB = 0.40            # 40%
 
-while True:
-    try:
-        res = requests.get(API_URL, timeout=15)
-        markets = res.json()
+# Polymarket API (official public endpoint)
+POLYMARKET_URL = "https://gamma-api.polymarket.com/markets"
 
-        for market in markets:
-            title = market.get("question", "")
-            slug = market.get("slug", "")
-            outcomes = market.get("outcomes", [])
+# ================= CORE LOGIC =================
+def fetch_markets():
+    r = requests.get(POLYMARKET_URL, timeout=15)
+    r.raise_for_status()
+    return r.json()
 
-            if "bitcoin" not in title.lower():
-                continue
+def extract_yes_probability(outcomes):
+    """
+    Safely extract YES probability
+    """
+    if not isinstance(outcomes, list):
+        return None
 
-            for o in outcomes:
-                name = o.get("name")
-                yes_price = o.get("yesPrice")
+    for o in outcomes:
+        if not isinstance(o, dict):
+            continue
+        if o.get("name", "").lower() == "yes":
+            price = o.get("price")
+            if price is None:
+                return None
+            try:
+                return float(price)
+            except:
+                return None
+    return None
 
-                if yes_price is None:
+def run():
+    print("✅ Polymarket BTC Alert Bot Started")
+    send_alert("✅ Polymarket BTC Alert Bot Started")
+
+    while True:
+        try:
+            markets = fetch_markets()
+
+            for m in markets:
+                if not isinstance(m, dict):
                     continue
 
-                prob = float(yes_price)
+                question = m.get("question", "")
+                slug = m.get("slug", "")
+                url = f"https://polymarket.com/market/{slug}"
+
+                # Focus only on Bitcoin markets
+                if "bitcoin" not in question.lower():
+                    continue
+
+                outcomes = m.get("outcomes")
+                prob = extract_yes_probability(outcomes)
+
+                if prob is None:
+                    continue
 
                 if MIN_PROB <= prob <= MAX_PROB:
-                    link = f"https://polymarket.com/market/{slug}"
-
-                    msg = (
-                        f"📊 Polymarket BTC Alert\n\n"
-                        f"🪙 Market: {title}\n"
-                        f"🎯 Strike: {name}\n"
-                        f"📈 Probability: {prob*100:.2f}%\n\n"
-                        f"🔗 {link}"
+                    message = (
+                        f"📊 *Polymarket Alert*\n\n"
+                        f"🪙 {question}\n"
+                        f"📈 YES Probability: {prob*100:.2f}%\n"
+                        f"🔗 {url}"
                     )
+                    send_alert(message)
 
-                    send_telegram(msg)
+            time.sleep(CHECK_INTERVAL)
 
-        time.sleep(CHECK_INTERVAL)
+        except Exception as e:
+            print("ERROR:", e)
+            time.sleep(30)
 
-    except Exception as e:
-        print("ERROR:", e)
-        time.sleep(10)
+# ================= START =================
+if __name__ == "__main__":
+    run()
+
