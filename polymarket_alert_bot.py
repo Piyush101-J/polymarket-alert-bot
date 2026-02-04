@@ -18,13 +18,13 @@ def health_check():
 @app.route('/test')
 def test():
     success = send_alert("Manual test from test endpoint")
-    return "Message sent: {}".format(success), 200
+    return "Message sent: " + str(success), 200
 
 BOT_TOKEN = "8534636585:AAHGUIe4wVSiRx1z0_UDqIU1l_xIija4-wo"
 CHAT_ID = "1771346124"
 
 def send_alert(text):
-    url = "https://api.telegram.org/bot{}/sendMessage".format(BOT_TOKEN)
+    url = "https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
         "text": text,
@@ -32,17 +32,16 @@ def send_alert(text):
     }
     try:
         response = requests.post(url, json=payload, timeout=10)
-        print("Telegram response: {} - {}".format(response.status_code, response.text))
+        print("Telegram response: " + str(response.status_code))
         return response.status_code == 200
     except Exception as e:
-        print("Failed to send alert: {}".format(e))
+        print("Failed to send alert: " + str(e))
         return False
 
 CHECK_INTERVAL = 60
 MIN_PROB = 0.01
 MAX_PROB = 0.40
 POLYMARKET_URL = "https://gamma-api.polymarket.com/markets"
-
 PRICE_BUFFER_LOW = 500
 PRICE_BUFFER_HIGH = 600
 
@@ -52,10 +51,10 @@ def get_current_btc_price():
         response = requests.get(url, timeout=10)
         data = response.json()
         price = data['bitcoin']['usd']
-        print("Current BTC Price: ${}".format(price))
+        print("Current BTC Price: $" + str(price))
         return price
     except Exception as e:
-        print("Error fetching BTC price: {}".format(e))
+        print("Error fetching BTC price: " + str(e))
         return None
 
 def extract_target_price(question):
@@ -90,8 +89,7 @@ def is_price_in_range(current_price, target_price):
     in_range = lower_bound <= current_price <= upper_bound
     
     if in_range:
-        print("ALERT CONDITION MET: BTC ${} is between ${} and ${} (target: ${})".format(
-            current_price, lower_bound, upper_bound, target_price))
+        print("ALERT: BTC $" + str(current_price) + " is in range")
     
     return in_range
 
@@ -101,11 +99,11 @@ def bot_loop():
         current_btc_price = get_current_btc_price()
         
         if current_btc_price is None:
-            print("Skipping this check - couldn't fetch BTC price")
+            print("Skipping - couldn't fetch BTC price")
             return
         
         markets = fetch_markets()
-        print("Found {} markets".format(len(markets)))
+        print("Found " + str(len(markets)) + " markets")
         
         bitcoin_count = 0
         alert_count = 0
@@ -125,45 +123,34 @@ def bot_loop():
             prob = extract_yes_probability(outcomes)
             target_price = extract_target_price(question)
             
-            print("Bitcoin market: {}... | Prob: {} | Target: ${}".format(
-                question[:50], prob, target_price))
+            print("Bitcoin market: " + question[:50] + "... | Prob: " + str(prob) + " | Target: $" + str(target_price))
             
             if prob is None or target_price is None:
                 continue
             
             if MIN_PROB <= prob <= MAX_PROB:
                 if is_price_in_range(current_btc_price, target_price):
-                    url = "https://polymarket.com/market/{}".format(slug)
-                    message = (
-                        "CRITICAL ALERT - BTC APPROACHING TARGET\n\n"
-                        "Question: {}\n"
-                        "Target Price: ${}\n"
-                        "Current BTC Price: ${}\n"
-                        "Distance to Target: ${}\n"
-                        "YES Probability: {:.2f}%\n"
-                        "Link: {}".format(
-                            question,
-                            target_price,
-                            current_btc_price,
-                            target_price - current_btc_price,
-                            prob * 100,
-                            url
-                        )
-                    )
+                    url = "https://polymarket.com/market/" + slug
+                    message = "CRITICAL ALERT - BTC APPROACHING TARGET\n\n"
+                    message += "Question: " + question + "\n"
+                    message += "Target Price: $" + str(target_price) + "\n"
+                    message += "Current BTC Price: $" + str(current_btc_price) + "\n"
+                    message += "Distance to Target: $" + str(target_price - current_btc_price) + "\n"
+                    message += "YES Probability: " + str(round(prob * 100, 2)) + "%\n"
+                    message += "Link: " + url
+                    
                     if send_alert(message):
                         alert_count += 1
-                        print("ALERT SENT for: {}...".format(question[:50]))
+                        print("ALERT SENT for: " + question[:50] + "...")
                 else:
-                    print("Probability OK but price not in range (${} to ${})".format(
-                        target_price - PRICE_BUFFER_HIGH,
-                        target_price - PRICE_BUFFER_LOW
-                    ))
+                    lower = target_price - PRICE_BUFFER_HIGH
+                    upper = target_price - PRICE_BUFFER_LOW
+                    print("Probability OK but price not in range ($" + str(lower) + " to $" + str(upper) + ")")
         
-        print("Check complete. Bitcoin markets: {}, Alerts sent: {}".format(
-            bitcoin_count, alert_count))
+        print("Check complete. Bitcoin markets: " + str(bitcoin_count) + ", Alerts sent: " + str(alert_count))
         
     except Exception as e:
-        print("Error in bot_loop: {}".format(e))
+        print("Error in bot_loop: " + str(e))
 
 def run_bot():
     print("Worker booted, running permanently")
@@ -171,13 +158,13 @@ def run_bot():
     if send_alert("Polymarket BTC Alert Bot is LIVE - Now with Price Checking"):
         print("Startup message sent successfully!")
     else:
-        print("Failed to send startup message - CHECK YOUR BOT_TOKEN AND CHAT_ID!")
+        print("Failed to send startup message")
     
     while True:
         try:
             bot_loop()
         except Exception as e:
-            print("Error: {}".format(e))
+            print("Error: " + str(e))
         time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
@@ -187,5 +174,5 @@ if __name__ == "__main__":
     bot_thread.start()
     
     port = int(os.environ.get("PORT", 8080))
-    print("Starting server on port {}".format(port))
+    print("Starting server on port " + str(port))
     serve(app, host="0.0.0.0", port=port)
