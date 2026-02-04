@@ -17,8 +17,8 @@ def health_check():
     return "OK", 200
 
 # ================= TELEGRAM =================
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-CHAT_ID = "YOUR_CHAT_ID"
+BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"
+CHAT_ID = "1771346124"
 
 def send_alert(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
