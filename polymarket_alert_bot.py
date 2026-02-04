@@ -20,7 +20,7 @@ def test():
     success = send_alert("Manual test from test endpoint")
     return "Message sent: {}".format(success), 200
 
-BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"
+BOT_TOKEN = "8534636585:AAHGUIe4wVSiRx1z0_UDqIU1l_xIija4-wo"
 CHAT_ID = "1771346124"
 
 def send_alert(text):
