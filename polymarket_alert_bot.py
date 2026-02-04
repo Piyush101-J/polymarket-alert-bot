@@ -1,40 +1,33 @@
 import time
-import re
 import requests
-import sys
 
 # ================= TELEGRAM =================
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-CHAT_ID = "YOUR_CHAT_ID"
+BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"
+CHAT_ID = "1771346124"
 
 def send_alert(text):
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": CHAT_ID,
-            "text": text,
-            "disable_web_page_preview": False
-        }
-        requests.post(url, json=payload, timeout=10)
-    except Exception as e:
-        print("Telegram error:", e)
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": text,
+        "disable_web_page_preview": False
+    }
+    requests.post(url, json=payload, timeout=10)
 
 # ================= SETTINGS =================
-CHECK_INTERVAL = 60
-MIN_PROB = 0.01
-MAX_PROB = 0.40
-BUFFER_PERCENT = 0.006
+CHECK_INTERVAL = 60          # seconds
+MIN_PROB = 0.01              # 1%
+MAX_PROB = 0.40              # 40%
 
 POLYMARKET_URL = "https://gamma-api.polymarket.com/markets"
 
 # ================= HELPERS =================
-def extract_strike(question):
-    m = re.search(r'(\d{2,3},?\d{3})', question)
-    if not m:
-        return None
-    return int(m.group(1).replace(",", ""))
+def fetch_markets():
+    r = requests.get(POLYMARKET_URL, timeout=15)
+    r.raise_for_status()
+    return r.json()
 
-def extract_yes_prob(outcomes):
+def extract_yes_probability(outcomes):
     if not isinstance(outcomes, list):
         return None
 
@@ -46,73 +39,53 @@ def extract_yes_prob(outcomes):
                 return None
     return None
 
-def fetch_markets():
-    r = requests.get(POLYMARKET_URL, timeout=15)
-    r.raise_for_status()
-    return r.json()
+def extract_price_from_question(question):
+    # Example: "Bitcoin above 80000 on February 4?"
+    nums = [int(s.replace(",", "")) for s in question.split() if s.replace(",", "").isdigit()]
+    return max(nums) if nums else None
 
-# ================= BOT LOOP =================
+# ================= CORE LOOP =================
 def bot_loop():
-    print("✅ Polymarket BTC Alert Bot Running")
-    send_alert("✅ Polymarket BTC Alert Bot Running")
+    markets = fetch_markets()
 
-    alerted = set()
+    for m in markets:
+        if not isinstance(m, dict):
+            continue
 
-    while True:
-        try:
-            markets = fetch_markets()
+        question = m.get("question", "")
+        slug = m.get("slug", "")
+        outcomes = m.get("outcomes")
 
-            for m in markets:
-                if not isinstance(m, dict):
-                    continue
+        if "bitcoin above" not in question.lower():
+            continue
 
-                question = m.get("question", "")
-                slug = m.get("slug", "")
-                outcomes = m.get("outcomes")
+        prob = extract_yes_probability(outcomes)
+        target_price = extract_price_from_question(question)
 
-                if "bitcoin" not in question.lower():
-                    continue
+        if prob is None or target_price is None:
+            continue
 
-                strike = extract_strike(question)
-                if not strike:
-                    continue
+        if MIN_PROB <= prob <= MAX_PROB:
+            url = f"https://polymarket.com/market/{slug}"
 
-                prob = extract_yes_prob(outcomes)
-                if prob is None or not (MIN_PROB <= prob <= MAX_PROB):
-                    continue
+            message = (
+                f"🚨 *EARLY POLYMARKET ALERT*\n\n"
+                f"🪙 {question}\n"
+                f"🎯 Target Price: {target_price:,}\n"
+                f"📊 YES Probability: {prob*100:.2f}%\n\n"
+                f"🔗 {url}"
+            )
+            send_alert(message)
 
-                key = f"{slug}-{strike}"
-                if key in alerted:
-                    continue
-
-                buffer = int(strike * BUFFER_PERCENT)
-                trigger = strike - buffer
-
-                url = f"https://polymarket.com/market/{slug}"
-
-                msg = (
-                    f"📊 Polymarket BTC Alert\n\n"
-                    f"🪙 {question}\n"
-                    f"🎯 Strike: {strike:,}\n"
-                    f"⚠️ Alert Price: {trigger:,}\n"
-                    f"📈 YES Probability: {prob*100:.2f}%\n\n"
-                    f"🔗 {url}"
-                )
-
-                send_alert(msg)
-                alerted.add(key)
-
-            time.sleep(CHECK_INTERVAL)
-
-        except Exception as e:
-            print("Loop error:", e)
-            time.sleep(30)
-
-# ================= IMMORTAL WRAPPER =================
+# ================= BOOTSTRAP =================
 if __name__ == "__main__":
+    print("🚀 Worker booted, running permanently")
+    send_alert("🚀 Polymarket BTC Alert Bot is LIVE")
+
     while True:
         try:
             bot_loop()
-        except Exception as fatal:
-            print("Fatal crash:", fatal)
-            time.sleep(10)
+        except Exception as e:
+            print("Error:", e)
+        time.sleep(CHECK_INTERVAL)
+
