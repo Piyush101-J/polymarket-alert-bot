@@ -1,3 +1,6 @@
-websocket-client
 requests
+websocket-client
 beautifulsoup4
+python-telegram-bot==20.7
+
+
