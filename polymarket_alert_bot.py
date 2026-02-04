@@ -17,14 +17,14 @@ def health_check():
 
 @app.route('/test')
 def test():
-    success = send_alert("🧪 Manual test from /test endpoint")
-    return f"Message sent: {success}", 200
+    success = send_alert("Manual test from test endpoint")
+    return "Message sent: {}".format(success), 200
 
 BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"
 CHAT_ID = "1771346124"
 
 def send_alert(text):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    url = "https://api.telegram.org/bot{}/sendMessage".format(BOT_TOKEN)
     payload = {
         "chat_id": CHAT_ID,
         "text": text,
@@ -32,10 +32,10 @@ def send_alert(text):
     }
     try:
         response = requests.post(url, json=payload, timeout=10)
-        print(f"Telegram response: {response.status_code} - {response.text}")
+        print("Telegram response: {} - {}".format(response.status_code, response.text))
         return response.status_code == 200
     except Exception as e:
-        print(f"Failed to send alert: {e}")
+        print("Failed to send alert: {}".format(e))
         return False
 
 CHECK_INTERVAL = 60
@@ -69,7 +69,7 @@ def bot_loop():
     print("Checking markets...")
     try:
         markets = fetch_markets()
-        print(f"Found {len(markets)} markets")
+        print("Found {} markets".format(len(markets)))
         
         bitcoin_count = 0
         alert_count = 0
@@ -86,28 +86,22 @@ def bot_loop():
             prob = extract_yes_probability(outcomes)
             target_price = extract_target_price(question)
             
-            print(f"Bitcoin market: {question[:50]}... | Prob: {prob} | Target: {target_price}")
+            print("Bitcoin market: {}... | Prob: {} | Target: {}".format(question[:50], prob, target_price))
             
             if prob is None or target_price is None:
                 continue
             
             if MIN_PROB <= prob <= MAX_PROB:
-                url = f"https://polymarket.com/market/{slug}"
-                message = (
-                    f"EARLY POLYMARKET ALERT\n\n"
-                    f"Question: {question}\n"
-                    f"Target Price: {target_price}\n"
-                    f"YES Probability: {prob*100:.2f}%\n"
-                    f"Link: {url}"
-                )
+                url = "https://polymarket.com/market/{}".format(slug)
+                message = "EARLY POLYMARKET ALERT\n\nQuestion: {}\nTarget Price: {}\nYES Probability: {:.2f}%\nLink: {}".format(question, target_price, prob*100, url)
                 if send_alert(message):
                     alert_count += 1
-                    print(f"Alert sent for: {question[:50]}...")
+                    print("Alert sent for: {}...".format(question[:50]))
         
-        print(f"Check complete. Bitcoin markets: {bitcoin_count}, Alerts sent: {alert_count}")
+        print("Check complete. Bitcoin markets: {}, Alerts sent: {}".format(bitcoin_count, alert_count))
         
     except Exception as e:
-        print(f"Error in bot_loop: {e}")
+        print("Error in bot_loop: {}".format(e))
 
 def run_bot():
     print("Worker booted, running permanently")
@@ -121,7 +115,7 @@ def run_bot():
         try:
             bot_loop()
         except Exception as e:
-            print(f"Error: {e}")
+            print("Error: {}".format(e))
         time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
@@ -131,21 +125,5 @@ if __name__ == "__main__":
     bot_thread.start()
     
     port = int(os.environ.get("PORT", 8080))
-    print(f"Starting server on port {port}")
+    print("Starting server on port {}".format(port))
     serve(app, host="0.0.0.0", port=port)
-```
-
-**Make sure to:**
-1. Replace `YOUR_TELEGRAM_BOT_TOKEN` with your actual token
-2. Replace `YOUR_CHAT_ID` with your actual chat ID
-
-**Your `requirements.txt` should be:**
-```
-requests
-flask
-waitress
-```
-
-**Your `Procfile` should be:**
-```
-web: python polymarket_alert_bot.py
