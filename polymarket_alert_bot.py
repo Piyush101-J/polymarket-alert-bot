@@ -1,96 +1,85 @@
 import time
 import requests
 
-# ===================== TELEGRAM =====================
+# ================== TELEGRAM ==================
 BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"
 CHAT_ID = "1771346124"
 
-TELEGRAM_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
-# ===================== SETTINGS =====================
-CHECK_INTERVAL = 15        # seconds
-PROBABILITY_THRESHOLD = 0.30   # 30%
-ALERT_COOLDOWN = 600       # seconds (10 min)
-
-last_alert_time = {}
-
-# ===================== HELPERS =====================
-def send_telegram(message):
+def send_alert(message):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
         "text": message,
         "disable_web_page_preview": False
     }
-    requests.post(TELEGRAM_URL, data=payload, timeout=10)
+    requests.post(url, json=payload, timeout=10)
 
-def get_btc_price():
-    url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
-    data = requests.get(url, timeout=10).json()
-    return float(data["price"])
+# ================== SETTINGS ==================
+CHECK_INTERVAL = 30  # seconds
+ALERT_COOLDOWN = 600  # 10 minutes
+MIN_PROB = 0.01   # 1%
+MAX_PROB = 0.40   # 40%
 
-def get_polymarket_markets():
-    """
-    Fetch Polymarket BTC markets
-    """
-    url = "https://gamma-api.polymarket.com/markets"
-    params = {
-        "limit": 50,
-        "query": "Bitcoin"
-    }
-    data = requests.get(url, params=params, timeout=15).json()
-    return data
+# Polymarket API (Bitcoin markets)
+POLYMARKET_API = "https://gamma-api.polymarket.com/markets"
 
-# ===================== CORE LOGIC =====================
-def check_polymarket():
-    btc_price = get_btc_price()
-    markets = get_polymarket_markets()
+# Keywords to filter correct bets
+KEYWORDS = [
+    "Bitcoin above",
+    "What price will Bitcoin hit",
+    "Bitcoin hit February"
+]
 
-    print(f"BTC Price: {btc_price}")
+last_alert_time = {}
 
-    for market in markets:
-        question = market.get("question", "")
-        slug = market.get("slug", "")
-        market_url = f"https://polymarket.com/market/{slug}"
+print("✅ Polymarket BTC Alert Bot Started")
 
-        outcomes = market.get("outcomes", [])
-        probs = market.get("outcomePrices", [])
+# ================== MAIN LOOP ==================
+while True:
+    try:
+        response = requests.get(POLYMARKET_API, timeout=10)
+        markets = response.json()
 
-        for outcome, prob in zip(outcomes, probs):
-            try:
-                probability = float(prob)
-            except:
+        for market in markets:
+            title = market.get("question", "")
+            slug = market.get("slug", "")
+            outcomes = market.get("outcomes", [])
+
+            # Filter only BTC-related markets
+            if not any(k.lower() in title.lower() for k in KEYWORDS):
                 continue
 
-            if probability > PROBABILITY_THRESHOLD:
-                continue
+            for outcome in outcomes:
+                name = outcome.get("name", "")
+                yes_price = outcome.get("yesPrice")
 
-            now = time.time()
-            key = f"{slug}-{outcome}"
+                if yes_price is None:
+                    continue
 
-            if key in last_alert_time and now - last_alert_time[key] < ALERT_COOLDOWN:
-                continue
+                prob = float(yes_price)
 
-            message = (
-                f"🚨 *LOW PROBABILITY BTC BET*\n\n"
-                f"📊 Market: {question}\n"
-                f"🎯 Outcome: {outcome}\n"
-                f"📉 Probability: {probability*100:.2f}%\n"
-                f"💰 BTC Price: ${btc_price:,.0f}\n\n"
-                f"🔗 Bet link:\n{market_url}"
-            )
+                if MIN_PROB <= prob <= MAX_PROB:
+                    now = time.time()
+                    key = f"{slug}-{name}"
 
-            send_telegram(message)
-            last_alert_time[key] = now
+                    if key in last_alert_time and now - last_alert_time[key] < ALERT_COOLDOWN:
+                        continue
 
-# ===================== RUN FOREVER =====================
-if __name__ == "__main__":
-    print("✅ Polymarket BTC Alert Bot Started")
+                    market_url = f"https://polymarket.com/market/{slug}"
 
-    while True:
-        try:
-            check_polymarket()
-            time.sleep(CHECK_INTERVAL)
-        except Exception as e:
-            print("Error:", e)
-            time.sleep(30)
+                    message = (
+                        f"📊 *Polymarket BTC Alert*\n\n"
+                        f"🪙 Market: {title}\n"
+                        f"🎯 Option: {name}\n"
+                        f"📈 Probability: {prob*100:.2f}%\n\n"
+                        f"🔗 {market_url}"
+                    )
 
+                    send_alert(message)
+                    last_alert_time[key] = now
+
+        time.sleep(CHECK_INTERVAL)
+
+    except Exception as e:
+        print("Error:", e)
+        time.sleep(10)
