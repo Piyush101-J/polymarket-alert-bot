@@ -5,7 +5,22 @@ from threading import Thread
 from flask import Flask
 import os
 
+# ================= FLASK HEALTH CHECK =================
 app = Flask(__name__)
+
+@app.route('/')
+def health():
+    return "Bot is running", 200
+
+@app.route('/health')
+def health_check():
+    return "OK", 200
+
+@app.route('/test')
+def test():
+    """Manual test endpoint"""
+    success = send_alert("🧪 Manual test from /test endpoint")
+    return f"Message sent: {success}", 200
 
 # ================= TELEGRAM =================
 BOT_TOKEN = "8534636585: AAHGUIe4wVSiR×1z0_UDqIU1l_xIija4-wo"  # ⚠️ REPLACE THIS
@@ -27,13 +42,17 @@ def send_alert(text):
         return False
 
 # ================= SETTINGS =================
-CHECK_INTERVAL = 60
-MIN_PROB = 0.01
-MAX_PROB = 0.40
+CHECK_INTERVAL = 60        # seconds
+MIN_PROB = 0.01            # 1%
+MAX_PROB = 0.40            # 40%
 POLYMARKET_URL = "https://gamma-api.polymarket.com/markets"
 
 # ================= HELPERS =================
 def extract_target_price(question: str):
+    """
+    Extracts price like 80000 from:
+    'Bitcoin above 80000 on February 4?'
+    """
     match = re.search(r"(\d{4,6})", question)
     if match:
         return int(match.group(1))
@@ -101,13 +120,14 @@ def bot_loop():
         print(f"❌ Error in bot_loop: {e}")
 
 def run_bot():
+    """Background thread for bot logic"""
     print("🚀 Worker booted, running permanently")
     
     # Send startup message
     if send_alert("🚀 Polymarket BTC Alert Bot is LIVE"):
-        print("✅ Startup message sent")
+        print("✅ Startup message sent successfully!")
     else:
-        print("❌ Failed to send startup message - check credentials!")
+        print("❌ Failed to send startup message - CHECK YOUR BOT_TOKEN AND CHAT_ID!")
     
     while True:
         try:
@@ -116,22 +136,31 @@ def run_bot():
             print(f"❌ Error: {e}")
         time.sleep(CHECK_INTERVAL)
 
-# ================= FLASK ROUTES =================
-@app.route('/')
-def health():
-    return "Bot is running", 200
-
-@app.route('/test')
-def test():
-    """Manual test endpoint"""
-    success = send_alert("🧪 Manual test from /test endpoint")
-    return f"Message sent: {success}", 200
-
 # ================= BOOTSTRAP =================
 if __name__ == "__main__":
+    from waitress import serve
+    
+    # Start bot in background thread
     bot_thread = Thread(target=run_bot, daemon=True)
     bot_thread.start()
     
+    # Start Flask server with waitress
     port = int(os.environ.get("PORT", 8080))
-    print(f"🌐 Flask server starting on port {port}")
-    app.run(host="0.0.0.0", port=port)
+    print(f"🌐 Starting server on port {port}")
+    serve(app, host="0.0.0.0", port=port)
+```
+
+---
+
+**And your `requirements.txt`:**
+```
+requests
+flask
+waitress
+```
+
+---
+
+**And your `Procfile`:**
+```
+web: python polymarket_alert_bot.py
