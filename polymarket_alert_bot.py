@@ -43,7 +43,7 @@ def send_alert(text):
 CHECK_INTERVAL = 60
 
 MIN_YES_PROB = 0.01
-MAX_YES_PROB = 0.42
+MAX_YES_PROB = 0.45
 YES_PRICE_BUFFER_LOW = 1500
 YES_PRICE_BUFFER_HIGH = 4500
 
@@ -51,7 +51,7 @@ MIN_NO_PROB = 0.70
 MAX_NO_PROB = 0.99
 NO_PRICE_BUFFER = 5000
 
-MIN_PROFIT_THRESHOLD = 15
+MIN_PROFIT_THRESHOLD = 10
 
 ALERT_COOLDOWN = 3600
 alerted_markets = {}
@@ -64,6 +64,21 @@ MONITORED_URLS = [
     "https://polymarket.com/event/bitcoin-above-on-february-8/bitcoin-above-70k-on-february-8",
     "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-72k-on-february-9",
     "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-70k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-72k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-74k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-76k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-78k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-80k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-8/bitcoin-above-72k-on-february-8",
+    "https://polymarket.com/event/bitcoin-above-on-february-8/bitcoin-above-74k-on-february-8",
+    "https://polymarket.com/event/bitcoin-above-on-february-8/bitcoin-above-78k-on-february-8",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-68k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-70k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-72k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-74k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-78k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-80k-on-february-9",
+    
     # Add more URLs here
 ]
 
