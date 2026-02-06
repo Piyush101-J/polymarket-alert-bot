@@ -61,12 +61,37 @@ alerted_markets = {}
 # MANUAL SEED URLS - ADD YOUR MARKETS HERE!
 # ============================================
 MANUAL_SEED_URLS = [
-    "https://polymarket.com/event/bitcoin-above-on-february-10/bitcoin-above-66k-on-february-10",
-    "https://polymarket.com/event/bitcoin-above-on-february-10/bitcoin-above-68k-on-february-10",
+   
     "https://polymarket.com/event/bitcoin-above-on-february-8/bitcoin-above-68k-on-february-8",
     "https://polymarket.com/event/bitcoin-above-on-february-8/bitcoin-above-70k-on-february-8",
-    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-72k-on-february-9",
+    
     "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-70k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-70k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-72k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-7/bitcoin-above-74k-on-february-7",
+    "https://polymarket.com/event/bitcoin-above-on-february-10/bitcoin-above-66k-on-february-10",
+    "https://polymarket.com/event/bitcoin-above-on-february-10/bitcoin-above-68k-on-february-10",
+    "https://polymarket.com/event/bitcoin-above-on-february-10/bitcoin-above-70k-on-february-10",
+    "https://polymarket.com/event/bitcoin-above-on-february-10/bitcoin-above-72k-on-february-10",
+    "https://polymarket.com/event/bitcoin-above-on-february-10/bitcoin-above-74k-on-february-10",
+    "https://polymarket.com/event/bitcoin-above-on-february-8/bitcoin-above-72k-on-february-8",
+    "https://polymarket.com/event/bitcoin-above-on-february-8/bitcoin-above-74k-on-february-8",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-68k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-70k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-72k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-9/bitcoin-above-74k-on-february-9",
+    "https://polymarket.com/event/bitcoin-above-on-february-11/bitcoin-above-64k-on-february-11",
+    "https://polymarket.com/event/bitcoin-above-on-february-11/bitcoin-above-66k-on-february-11",
+    "https://polymarket.com/event/bitcoin-above-on-february-11/bitcoin-above-68k-on-february-11",
+    "https://polymarket.com/event/bitcoin-above-on-february-11/bitcoin-above-70k-on-february-11",
+    "https://polymarket.com/event/bitcoin-above-on-february-11/bitcoin-above-72k-on-february-11",
+    "https://polymarket.com/event/bitcoin-above-on-february-11/bitcoin-above-74k-on-february-11",
+    "https://polymarket.com/event/bitcoin-above-on-february-12/bitcoin-above-66k-on-february-12",
+    "https://polymarket.com/event/bitcoin-above-on-february-12/bitcoin-above-68k-on-february-12",
+    "https://polymarket.com/event/bitcoin-above-on-february-12/bitcoin-above-70k-on-february-12",
+    "https://polymarket.com/event/bitcoin-above-on-february-12/bitcoin-above-72k-on-february-12",
+    "https://polymarket.com/event/bitcoin-above-on-february-12/bitcoin-above-74k-on-february-12",
+    
     # Add more URLs here as you find them!
 ]
 
